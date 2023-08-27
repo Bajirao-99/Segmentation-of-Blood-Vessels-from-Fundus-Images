@@ -1,0 +1,56 @@
+
+#import the dependencies
+import cv2
+import numpy as np
+from matplotlib import pyplot as plt
+
+#reading input image
+img1 = cv2.imread('fundus.jpeg',0)
+
+#Performing blurring for reducing noise
+img = cv2.GaussianBlur(img1, (3,3), 0)
+
+#Gamma and contrast correction
+alpha = 1.3
+beta = 0.7
+image = cv2.convertScaleAbs(img, alpha=alpha, beta=beta)
+
+#adaptive thresholding is used as brightness is changing locally.
+th3 = cv2.adaptiveThreshold(image,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,99,3)
+print("Threshold: ")
+plt.imshow(th3, cmap='gray')
+plt.show()
+
+#finding contours
+contours, hierarchy = cv2.findContours(th3, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+for contour in contours:
+    area = cv2.contourArea(contour)
+    if area < 256:
+        cv2.drawContours(th3, [contour], 0, [0,0,0], -1 )
+
+print("Contours: ")
+plt.imshow(th3, cmap='gray')
+plt.show()
+
+#median filter for removing small blobs
+# img_median = cv2.medianBlur(th3, 23) # Add median filter to image
+# print("Medain Filter: ")
+# plt.imshow(img_median, cmap = 'gray')
+# plt.show()
+
+#generating the circular mask for removing boundary
+ret, mask = cv2.threshold(image, 5,255,cv2.THRESH_BINARY)
+kernel = np.ones((11, 11), np.uint8)
+print("Mask : ")  
+mask = cv2.erode(mask, kernel, iterations=10)
+print("Final Output: ")
+plt.imshow(mask, cmap = 'gray')
+plt.show()
+
+#generating final output
+result = cv2.bitwise_and(mask, th3)
+plt.imshow(result, cmap='gray')
+plt.show()
+
+#saving the output
+cv2.imwrite('output.jpeg', result)
